@@ -3,29 +3,30 @@ version: '3.8'
 services:
   postgres:
     image: postgres:latest
-    container_name: postgres_db
     environment:
       POSTGRES_DB: property_listings_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres123
     ports:
-      - "5432:5432"
+      - "5433:5432"  # Changed from 5432 to 5433 to avoid port conflict
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - app-network
+      - property_network
 
   redis:
     image: redis:latest
-    container_name: redis_cache
     ports:
-      - "6379:6379"
+      - "6380:6379"  # Changed from 6379 to 6380 to avoid port conflict
+    volumes:
+      - redis_data:/data
     networks:
-      - app-network
+      - property_network
 
 volumes:
   postgres_data:
+  redis_data:
 
 networks:
-  app-network:
+  property_network:
     driver: bridge
