@@ -1,16 +1,14 @@
-from django.db.models.signals import post_save, post_delete
-from django.dispatch import receiver
-from django.core.cache import cache
 from .models import Property
-import logging
-
-logger = logging.getLogger(__name__)
+from django.dispatch import receiver
+from django.db.models.signals import post_save, post_delete
+from django.core.cache import cache
 
 @receiver(post_save, sender=Property)
-@receiver(post_delete, sender=Property)
-def invalidate_property_cache(sender, instance, **kwargs):
-    """
-    Invalidates the 'all_properties' cache key on property save or delete.
-    """
+def invalidate_cache_on_save(sender, instance, created, **kwargs):
+    # Invalidate cache on create or update
     cache.delete('all_properties')
-    logger.info("Cache for 'all_properties' has been invalidated.")
+    
+@receiver(post_delete, sender=Property)
+def invalidate_cache_on_delete(sender, instance, **kwargs):
+    # Invalidate cache on delete
+    cache.delete('all_properties')
