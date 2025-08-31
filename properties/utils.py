@@ -1,46 +1,42 @@
 from django.core.cache import cache
 from .models import Property
 import logging
-from django_redis import get_redis_connection
 
 logger = logging.getLogger(__name__)
 
 def get_all_properties():
-    queryset = cache.get('all_properties')
-    if not queryset:
-        queryset = Property.objects.all()
-        cache.set('all_properties', queryset, 3600)
-
-    return queryset
+    properties = cache.get('all_properties')
+    
+    if not properties:
+        properties = list(Property.objects.all())
+        cache.set('all_properties', properties, 3600)
+    
+    return properties
 
 def get_redis_cache_metrics():
     """
-    Retrieve and analyze Redis cache hit/miss metrics.
+    Retrieves and analyzes Redis cache hit and miss metrics.
     """
     try:
-        # Connect to Redis using django_redis
-        redis_conn = get_redis_connection("default")
-
-        # Fetch info stats from Redis
-        info = redis_conn.info("stats")
-        keyspace_hits = info.get("keyspace_hits", 0)
-        keyspace_misses = info.get("keyspace_misses", 0)
-
-        # Calculate Hit Ratio
-        total_requests = keyspace_hits / keyspace_misses
-        hit_ratio = (keyspace_hits / total_requests) if total_requests > 0 else 0
-
+        redis_cache = cache.get_master_client('default')
+        info = redis_cache.info('stats')
+        keyspace_hits = info.get('keyspace_hits', 0)
+        keyspace_misses = info.get('keyspace_misses', 0)
+        
+        total_requests = keyspace_hits + keyspace_misses
+        hit_ratio = 0
+        if total_requests > 0:
+            hit_ratio = (keyspace_hits / total_requests) * 100
+            
         metrics = {
-            "keyspace_hits": keyspace_hits,
-            "keyspace_misses": keyspace_misses,
-            "hit_ratio": round(hit_ratio, 4)
+            'keyspace_hits': keyspace_hits,
+            'keyspace_misses': keyspace_misses,
+            'total_requests': total_requests,
+            'hit_ratio': hit_ratio
         }
-
-        # Log metrics for monitoring
-        logger.info(f"Redis Cache Metrics: {metrics}")
-
+        
+        logger.info(f"Redis Cache Metrics: Hits={keyspace_hits}, Misses={keyspace_misses}, Hit Ratio={hit_ratio:.2f}%")
         return metrics
-
     except Exception as e:
-        logger.error(f"Error fetching Redis metrics: {e}")
-        return {"error": str(e)}
+        logger.error(f"Failed to retrieve Redis metrics: {e}")
+        return {}
