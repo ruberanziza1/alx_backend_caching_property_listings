@@ -1,32 +1,39 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:latest
-    environment:
-      POSTGRES_DB: property_listings_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres123
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
     ports:
-      - "5433:5432"  # Changed from 5432 to 5433 to avoid port conflict
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - POSTGRES_DB=alx_db
+      - POSTGRES_USER=alx_user
+      - POSTGRES_PASSWORD=alx_password
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - REDIS_URL=redis://redis:6379/1
+
+  postgres:
+    image: postgres:13
+    environment:
+      - POSTGRES_DB=alx_db
+      - POSTGRES_USER=alx_user
+      - POSTGRES_PASSWORD=alx_password
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks:
-      - property_network
 
   redis:
     image: redis:latest
     ports:
-      - "6380:6379"  # Changed from 6379 to 6380 to avoid port conflict
-    volumes:
-      - redis_data:/data
-    networks:
-      - property_network
+      - "6379:6379"
 
 volumes:
   postgres_data:
-  redis_data:
-
-networks:
-  property_network:
-    driver: bridge
